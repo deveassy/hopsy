@@ -34,6 +34,30 @@ hopsy/
 └── docs/
 ```
 
+## Backend Development
+
+Use Node.js 24 (see `.nvmrc`) and pnpm.
+
+```sh
+pnpm install
+pnpm dev:api
+```
+
+The API listens on `http://localhost:3000`. Override the address with the `HOST`
+and `PORT` environment variables (for example, `PORT=3001 pnpm dev:api`).
+
+```sh
+curl http://localhost:3000/health
+# {"status":"ok"}
+
+pnpm typecheck:api
+pnpm build:api
+pnpm start:api
+```
+
+`GET /health` returns HTTP 200 while the server is running. It does not check
+database or external service connectivity.
+
 ## Status
 
 🚧 Under active development.

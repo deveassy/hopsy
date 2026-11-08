@@ -2,6 +2,10 @@
   "name": "hopsy",
   "private": true,
   "scripts": {
+    "dev:api": "pnpm --filter @hopsy/api dev",
+    "build:api": "pnpm --filter @hopsy/api build",
+    "start:api": "pnpm --filter @hopsy/api start",
+    "typecheck:api": "pnpm --filter @hopsy/api typecheck",
     "dev:mobile": "pnpm --filter @hopsy/mobile start",
     "ios": "pnpm --filter @hopsy/mobile ios",
     "android": "pnpm --filter @hopsy/mobile android"
