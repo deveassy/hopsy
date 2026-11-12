@@ -1,6 +1,8 @@
 import { buildApp } from './app.js';
+import { prisma } from './lib/prisma.js';
 
-const app = buildApp();
+const app = buildApp({ db: prisma });
+app.addHook('onClose', async () => { await prisma.$disconnect(); });
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.once(signal, async () => {

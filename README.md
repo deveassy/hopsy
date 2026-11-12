@@ -102,6 +102,30 @@ using `pnpm --filter @hopsy/api db:deploy` for deployment.
 References: [Prisma PostgreSQL setup](https://www.prisma.io/docs/orm/v7/core-concepts/supported-databases/postgresql)
 and [Supabase Prisma guide](https://supabase.com/docs/guides/database/prisma).
 
+## Party API
+
+With the database schema migrated and `apps/api/.env` configured, start the API
+with `pnpm dev:api`. An existing `User` row is required to create a party. Use its
+real UUID as `ownerId`; this API does not create users or authenticate callers.
+The caller-supplied owner ID is not proof of identity or ownership.
+
+```sh
+curl -i http://localhost:3000/parties \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Christmas Crawl","ownerId":"<existing-user-uuid>"}'
+curl -i http://localhost:3000/parties/<party-uuid>
+pnpm --filter @hopsy/api test
+```
+
+`POST /parties` returns 201 and the saved party; `GET /parties/:id` returns 200
+and the party, or 404 if missing. Both return `id`, `name`, `ownerId`, `createdAt`,
+and `updatedAt`. Names must contain non-whitespace text and be at most 100
+characters; surrounding whitespace is trimmed. Owner and party IDs must be UUIDs.
+Invalid input or a nonexistent owner returns 400. Unexpected database failures
+return a generic 500 response without database details. Creation does not add a
+membership. Tests use Fastify injection with mocked Prisma calls and do not
+require or verify a live Supabase connection.
+
 ## Status
 
 🚧 Under active development.
