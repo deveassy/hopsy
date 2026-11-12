@@ -1,8 +1,13 @@
 import type { FastifyPluginAsync } from 'fastify';
-import { Prisma, type PrismaClient } from '../generated/prisma/client.js';
+import type { PrismaClient } from '../generated/prisma/client.js';
+import type { VerifyToken } from '../lib/supabase-auth.js';
+
+declare module 'fastify' {
+  interface FastifyRequest { authUserId: string }
+}
 
 export type PartyDatabase = {
-  user: Pick<PrismaClient['user'], 'findUnique'>;
+  user: Pick<PrismaClient['user'], 'upsert'>;
   party: Pick<PrismaClient['party'], 'create' | 'findUnique'>;
 };
 
@@ -20,35 +25,39 @@ const partyResponse = {
   },
 } as const;
 
-export const partyRoutes: FastifyPluginAsync<{ db: PartyDatabase }> = async (app, { db }) => {
-  app.post<{ Body: { name: string; ownerId: string } }>('/parties', {
+export const partyRoutes: FastifyPluginAsync<{ db: PartyDatabase; verifyToken: VerifyToken }> = async (app, { db, verifyToken }) => {
+  app.decorateRequest('authUserId', '');
+  app.addHook('onRequest', async (request, reply) => {
+    const match = /^Bearer ([^\s]+)$/i.exec(request.headers.authorization ?? '');
+    const user = match ? await verifyToken(match[1]!) : null;
+    if (!user) {
+      return reply.header('WWW-Authenticate', 'Bearer').code(401).send({ message: 'Unauthorized' });
+    }
+    request.authUserId = user.id;
+  });
+  app.addHook('preHandler', async (request) => {
+    await db.user.upsert({
+      where: { id: request.authUserId },
+      create: { id: request.authUserId, name: 'Anonymous' },
+      update: {},
+    });
+  });
+
+  app.post<{ Body: { name: string } }>('/parties', {
     schema: {
       body: {
         type: 'object',
         additionalProperties: false,
-        required: ['name', 'ownerId'],
+        required: ['name'],
         properties: {
           name: { type: 'string', minLength: 1, maxLength: 100, pattern: '\\S' },
-          ownerId: uuid,
         },
       },
       response: { 201: partyResponse },
     },
   }, async (request, reply) => {
-    const { name, ownerId } = request.body;
-    const owner = await db.user.findUnique({ where: { id: ownerId }, select: { id: true } });
-    if (!owner) return reply.code(400).send({ message: 'Owner does not exist' });
-
-    try {
-      const party = await db.party.create({ data: { name: name.trim(), ownerId } });
-      return reply.code(201).send(party);
-    } catch (error) {
-      // The owner may have been deleted between the lookup and insert.
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-        return reply.code(400).send({ message: 'Owner does not exist' });
-      }
-      throw error;
-    }
+    const party = await db.party.create({ data: { name: request.body.name.trim(), ownerId: request.authUserId } });
+    return reply.code(201).send(party);
   });
 
   app.get<{ Params: { id: string } }>('/parties/:id', {

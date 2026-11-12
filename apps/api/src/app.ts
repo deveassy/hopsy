@@ -1,7 +1,8 @@
 import Fastify, { type FastifyError } from 'fastify';
 import { partyRoutes, type PartyDatabase } from './routes/parties.js';
+import type { VerifyToken } from './lib/supabase-auth.js';
 
-export function buildApp({ db, logger = true }: { db: PartyDatabase; logger?: boolean }) {
+export function buildApp({ db, verifyToken, logger = true }: { db: PartyDatabase; verifyToken: VerifyToken; logger?: boolean }) {
   const app = Fastify({ logger, ajv: { customOptions: { coerceTypes: false, removeAdditional: false } } });
 
   app.setErrorHandler<FastifyError>((error, request, reply) => {
@@ -14,7 +15,7 @@ export function buildApp({ db, logger = true }: { db: PartyDatabase; logger?: bo
   });
 
   app.get('/health', async () => ({ status: 'ok' }));
-  app.register(partyRoutes, { db });
+  app.register(partyRoutes, { db, verifyToken });
 
   return app;
 }
