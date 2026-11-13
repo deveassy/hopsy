@@ -54,3 +54,62 @@ Join our community of developers creating universal apps.
 
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+
+## Anonymous authentication
+
+Copy `.env.example` to `.env` in this directory and set the public Supabase URL
+and publishable key for the same project used by the API. Enable anonymous
+sign-ins in Supabase Auth. Never put service-role keys or database credentials
+in `EXPO_PUBLIC_*` variables; these values are included in the app bundle.
+
+The root `AuthProvider` restores the saved Supabase session before creating an
+anonymous user. Concurrent initialization calls share one request. Restore,
+network, and storage failures show an error with a Retry button rather than
+automatically creating a replacement identity. Existing sessions are refreshed
+by the SDK, with auto-refresh paused in the background and resumed when active.
+The existing starter screens are shown after authentication; onboarding and
+Party screens are not implemented.
+
+Use `useAuth()` from `src/auth/auth-provider.tsx` to access `session`, `loading`,
+`error`, and `retry`. The session's `access_token` can be sent as a Bearer token
+to the API in future work. The backend remains responsible for verification.
+
+On iOS and Android, tokens are persisted exclusively in Expo SecureStore with
+device-only, unlocked Keychain accessibility. Large sessions are split into
+small ASCII chunks; updates publish their manifest after writing all chunks.
+Failed updates preserve the previous session. Storage corruption/read failures
+are surfaced instead of being treated as a missing session. A process crash
+during a write may leave unreferenced chunks in secure storage. Do not delete
+app data to resolve transient login errors: anonymous identities cannot be
+recovered after their refresh token is lost. SecureStore is not a backup, and
+uninstall/reinstall behavior differs across platforms.
+
+SecureStore is native-only. Web renders the authentication error state rather
+than storing tokens insecurely in localStorage; persistent web authentication
+is outside this mobile task. Use an iOS/Android development build after adding
+the native module and its config plugin.
+
+From the repository root:
+
+```sh
+pnpm --filter @hopsy/mobile test
+pnpm --filter @hopsy/mobile typecheck
+pnpm --filter @hopsy/mobile lint
+pnpm dev:mobile
+```
+
+Manual checks on a device/development build:
+
+1. Start with no saved session; confirm loading completes and one anonymous Auth
+   user appears in Supabase.
+2. Force-close/reopen the app; verify the same user ID and no extra Auth user.
+3. Background/foreground the app and confirm session refresh still works.
+4. Retry after a network failure, preserving the saved session. Disable anonymous
+   sign-in for a clean install to check the error and Retry state.
+
+Automated tests cover bootstrap concurrency, restoring existing identities,
+error handling, the real Supabase SDK with mocked signup responses, and a mocked
+secure backing store. They do not verify device Keychain/Keystore or live Auth.
+
+References: [Expo SDK 58 SecureStore](https://docs.expo.dev/versions/v58.0.0/sdk/securestore/),
+[Supabase Expo guide](https://supabase.com/docs/guides/getting-started/tutorials/with-expo-react-native).
