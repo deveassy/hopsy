@@ -19,9 +19,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
   useEffect(() => {
     let active = true;
     let cleanup = () => {};
-    void Promise.resolve().then(() => {
+    void Promise.resolve().then(async () => {
       if (!active) return null;
-      const client = getSupabase();
+      const client = await getSupabase();
+      if (!active) return null;
       const { data: { subscription } } = client.auth.onAuthStateChange((event, session) => {
         if (!active || event === 'INITIAL_SESSION') return;
         if (session) setState({ session, loading: false, error: null });
