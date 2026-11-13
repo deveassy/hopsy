@@ -88,8 +88,8 @@ Initial models are `User` (name and timestamps), `Party` (name and owner), and
 `PartyMember` (user/party membership and join time). A composite primary key
 prevents duplicate memberships. Party owners must be reassigned before deleting
 their user; deleting a party or user removes its memberships. Ownership does not
-automatically create a membership. These are application tables with no Supabase
-Auth integration yet.
+automatically create a membership. These are application tables; Supabase Auth users are synchronized by verified
+UUID into `User` without changing the database constraints.
 
 No migration has been applied. Once a development database and a separate shadow
 database are available, create and review the initial migration with
@@ -101,6 +101,49 @@ using `pnpm --filter @hopsy/api db:deploy` for deployment.
 
 References: [Prisma PostgreSQL setup](https://www.prisma.io/docs/orm/v7/core-concepts/supported-databases/postgresql)
 and [Supabase Prisma guide](https://supabase.com/docs/guides/database/prisma).
+
+## Party API
+
+With the database schema migrated and `apps/api/.env` configured, start the API
+with `pnpm dev:api`. Set `SUPABASE_URL` and `SUPABASE_PUBLISHABLE_KEY` for the same
+project as the database (a legacy anon key also works). No service-role key is
+needed. Enable anonymous sign-ins in the Supabase Auth dashboard. On the client,
+call `supabase.auth.signInAnonymously()` and send the session's `access_token`:
+
+```sh
+curl -i http://localhost:3000/parties \
+  -H "Authorization: Bearer $ACCESS_TOKEN" \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Christmas Crawl"}'
+curl -i http://localhost:3000/parties/<party-uuid> \
+  -H "Authorization: Bearer $ACCESS_TOKEN"
+pnpm --filter @hopsy/api test
+```
+
+Both Party routes require a valid Supabase user access token. The API verifies it
+with the project's Auth server using `auth.getUser(token)`; it does not trust
+client-supplied user IDs or unverified JWT payloads. Anonymous Auth users are real
+Supabase users with the `authenticated` role, distinct from the public anon API
+key. Permanent users are supported too. No API session or token refresh is stored;
+the client manages its session. `/health` remains public.
+
+After authentication and request validation, the API upserts the Prisma `User`
+with the verified Supabase UUID. A new row receives the initial name `Anonymous`;
+existing names are preserved. `POST /parties` accepts only `name`, derives
+`ownerId` from that UUID, and returns 201. Sending `ownerId` is rejected with 400.
+`GET /parties/:id` returns 200 or 404; any authenticated user can retrieve a party
+by ID at this stage (no membership or owner-only access rules are added).
+Responses contain `id`, `name`, `ownerId`, `createdAt`, and `updatedAt`.
+
+Names must contain non-whitespace text and be at most 100 characters; surrounding
+whitespace is trimmed. Party IDs must be UUIDs. Invalid input returns 400;
+missing, malformed, or rejected credentials return 401. Unexpected Auth service
+or database failures return a generic 500 without sensitive details. Creation
+does not add memberships. Tests exercise Fastify requests with mocked Prisma and
+Auth verification, plus the real Supabase SDK against mocked Auth HTTP responses.
+Live Supabase authentication and persistence are not verified by these tests.
+
+Reference: [Supabase getUser verification](https://supabase.com/docs/reference/javascript/auth-getuser).
 
 ## Status
 
