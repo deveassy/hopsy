@@ -1,56 +1,42 @@
-# Welcome to your Expo app 👋
+# Hopsy Mobile
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Expo / React Native app using Expo Router and TypeScript.
 
-## Get started
+## Setup
 
-1. Install dependencies
+From the repository root:
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+pnpm install
+cp apps/mobile/.env.example apps/mobile/.env
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Set `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` in
+`apps/mobile/.env`, and enable anonymous sign-ins in Supabase Auth. Use the same
+Supabase project as the API. Only public client configuration belongs here;
+never include service-role keys or database credentials.
 
-### Other setup steps
+```sh
+pnpm dev:mobile
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Use an iOS or Android development build with the native dependencies installed.
+Web authentication is not configured.
 
-## Learn more
+## Authentication
 
-To learn more about developing your project with Expo, look at the following resources:
+The app restores an existing session or signs in anonymously when none exists.
+Sessions are stored in Expo SecureStore. Restoration failures show an error and
+Retry without automatically resetting the session or creating a new user.
+Lost anonymous credentials cannot currently be recovered by the app.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+`useAuth()` in `src/auth/auth-provider.tsx` exposes the session, loading state,
+error, and retry action. The SDK requires a small [initialization patch](../../patches/README.md).
 
-## Join the community
+## Checks
 
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```sh
+pnpm --filter @hopsy/mobile test
+pnpm --filter @hopsy/mobile typecheck
+pnpm --filter @hopsy/mobile lint
+```

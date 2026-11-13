@@ -1,0 +1,65 @@
+diff --git a/dist/main/GoTrueClient.js b/dist/main/GoTrueClient.js
+index 23f9f36b7293de6e5de66b5c1e5d0fce65aba6e7..c7ed32a94223b6bfa6fcb69c74c2a55a8765d6e1 100644
+--- a/dist/main/GoTrueClient.js
++++ b/dist/main/GoTrueClient.js
+@@ -3713,13 +3713,15 @@ class GoTrueClient {
+             if (this.lock != null) {
+                 // TODO(v3): remove legacy lock path
+                 await this._acquireLock(this.lockAcquireTimeout, async () => {
+-                    this._emitInitialSession(id);
++                    await this._emitInitialSession(id);
+                 });
+             }
+             else {
+                 await this._emitInitialSession(id);
+             }
+-        })();
++        })().catch(() => {
++            this._debug('#onAuthStateChange()', 'INITIAL_SESSION storage read failed');
++        });
+         return { data: { subscription } };
+     }
+     async _emitInitialSession(id) {
+diff --git a/dist/module/GoTrueClient.js b/dist/module/GoTrueClient.js
+index 7834d902bb578c5e50fd3e0e2aff696bada7b1f1..6092d068ac3dd9b2b3bd523a322247a6e3fae636 100644
+--- a/dist/module/GoTrueClient.js
++++ b/dist/module/GoTrueClient.js
+@@ -3710,13 +3710,15 @@ class GoTrueClient {
+             if (this.lock != null) {
+                 // TODO(v3): remove legacy lock path
+                 await this._acquireLock(this.lockAcquireTimeout, async () => {
+-                    this._emitInitialSession(id);
++                    await this._emitInitialSession(id);
+                 });
+             }
+             else {
+                 await this._emitInitialSession(id);
+             }
+-        })();
++        })().catch(() => {
++            this._debug('#onAuthStateChange()', 'INITIAL_SESSION storage read failed');
++        });
+         return { data: { subscription } };
+     }
+     async _emitInitialSession(id) {
+diff --git a/src/GoTrueClient.ts b/src/GoTrueClient.ts
+index eea8ef58e6511c5380a036bd0fed6f48ffa6f8e5..41eb0ac1b3602864c9acdef73037c00f06cdfc33 100644
+--- a/src/GoTrueClient.ts
++++ b/src/GoTrueClient.ts
+@@ -4410,12 +4410,14 @@ export default class GoTrueClient {
+       if (this.lock != null) {
+         // TODO(v3): remove legacy lock path
+         await this._acquireLock(this.lockAcquireTimeout, async () => {
+-          this._emitInitialSession(id)
++          await this._emitInitialSession(id)
+         })
+       } else {
+         await this._emitInitialSession(id)
+       }
+-    })()
++    })().catch(() => {
++      this._debug('#onAuthStateChange()', 'INITIAL_SESSION storage read failed')
++    })
+ 
+     return { data: { subscription } }
+   }
