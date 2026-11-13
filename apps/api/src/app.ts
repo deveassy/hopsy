@@ -17,8 +17,9 @@ export function buildApp({
   });
 
   app.setErrorHandler<FastifyError>((error, request, reply) => {
-    if (error.validation || error.statusCode === 400) {
-      return reply.code(400).send({ message: "Invalid request" });
+    const statusCode = error.validation ? 400 : error.statusCode;
+    if (statusCode !== undefined && statusCode >= 400 && statusCode < 500) {
+      return reply.code(statusCode).send({ message: "Invalid request" });
     }
     // Do not log raw database errors: they may contain credentials or query data.
     request.log.error({ requestId: request.id, err: error }, "Request failed");

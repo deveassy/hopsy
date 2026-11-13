@@ -56,6 +56,21 @@ describe('Party API', () => {
     expect(context.db.party.create).not.toHaveBeenCalled();
   });
 
+  it.each([
+    { contentType: 'application/xml', payload: '<party/>', status: 415 },
+    { contentType: 'application/json', payload: JSON.stringify({ name: 'a'.repeat(1024 * 1024) }), status: 413 },
+  ])('preserves $status for rejected request bodies', async ({ contentType, payload, status }) => {
+    const response = await context.app.inject({
+      method: 'POST', url: '/parties',
+      headers: { authorization: 'Bearer verified-token', 'content-type': contentType },
+      payload,
+    });
+    expect(response.statusCode).toBe(status);
+    expect(response.json()).toEqual({ message: 'Invalid request' });
+    expect(context.db.user.upsert).not.toHaveBeenCalled();
+    expect(context.db.party.create).not.toHaveBeenCalled();
+  });
+
   it('rejects invalid route parameters before database access', async () => {
     const response = await context.app.inject({ url: '/parties/not-a-uuid', headers: { authorization: 'Bearer verified-token' } });
     expect(response.statusCode).toBe(400);
