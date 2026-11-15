@@ -1,3 +1,5 @@
 packages:
   - "apps/*"
   - "packages/*"
+patchedDependencies:
+  '@supabase/auth-js@2.119.0': patches/@supabase__auth-js@2.119.0.patch
